@@ -10,6 +10,7 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       await API.post("/api/auth/login", { email, password });
+      localStorage.setItem("user", JSON.stringify({ email }));
       navigate("/dashboard");
     } catch (err) {
       alert(err.response?.data?.error || "Login failed");
