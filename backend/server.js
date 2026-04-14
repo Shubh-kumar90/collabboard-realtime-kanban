@@ -16,11 +16,15 @@ const projectRoutes = require("./routes/projectRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const userRoutes = require("./routes/userRoutes");
 
+// ================= CORS CONFIG =================
+const FRONTEND_URL = "https://collabboard-realtime-kanban.vercel.app";
+
 // ================= SOCKET =================
 const io = new Server(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: FRONTEND_URL,
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
@@ -29,19 +33,22 @@ app.set("io", io);
 // ================= MIDDLEWARE =================
 app.use(express.json());
 
+// ✅ FIXED CORS
 app.use(cors({
-  origin: "https://collabboard-realtime-kanban.vercel.app",
+  origin: FRONTEND_URL,
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
 
+// ================= SESSION =================
 app.use(session({
   secret: "collab_secret",
   resave: false,
   saveUninitialized: false,
- cookie: {
-  secure: true,
-  sameSite: "none"
-}
+  cookie: {
+    secure: true,        // required for HTTPS
+    sameSite: "none"     // required for cross-origin
+  }
 }));
 
 // ================= ROUTES =================
