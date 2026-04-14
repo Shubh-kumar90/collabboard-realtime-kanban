@@ -20,28 +20,32 @@ const userRoutes = require("./routes/userRoutes");
 // const FRONTEND_URL = "https://collabboard-realtime-kanban.vercel.app";
 const FRONTEND_URL = "https://collabboard-realtime-kanban.vercel.app";
 
-// ================= SOCKET =================
-const io = new Server(server, {
-  cors: {
-    origin: FRONTEND_URL,
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
+// CORS middleware
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", FRONTEND_URL);
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
 
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200); // 🔥 THIS LINE FIXES YOUR ISSUE
+  }
+
+  next();
+});
 app.set("io", io);
 
 // ================= MIDDLEWARE =================
 app.use(express.json());
 
 // ✅ FIXED CORS
-app.use(cors({
-  origin: FRONTEND_URL,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
-app.options("*", cors());
+// app.use(cors({
+//   origin: FRONTEND_URL,
+//   credentials: true,
+//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization"]
+// }));
+// app.options("*", cors());
 // ================= SESSION =================
 app.use(session({
   secret: "collab_secret",
