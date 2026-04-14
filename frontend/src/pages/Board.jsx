@@ -12,10 +12,8 @@ export default function Board() {
   const [selectedUser, setSelectedUser] = useState("");
   const [selectedTask, setSelectedTask] = useState(null);
   const [activity, setActivity] = useState([]);
-
-
   const [notifications, setNotifications] = useState([]);
-const [showNotifications, setShowNotifications] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const { id: projectId } = useParams();
   const user = JSON.parse(localStorage.getItem("user"));
@@ -33,25 +31,25 @@ const [showNotifications, setShowNotifications] = useState(false);
     setUsers(res.data);
   };
 
+  // ================= SOCKET =================
   useEffect(() => {
     fetchTasks();
     fetchUsers();
 
-    socket.emit("userOnline", user?.name || "Guest");
+    // ✅ FIX: unique identity
+    socket.emit("userOnline", user?.email || "Guest");
 
     socket.on("onlineUsers", (users) => {
       setOnlineUsers(users);
     });
 
-
     socket.on("notification", (data) => {
-  setNotifications((prev) => [
-    { ...data, time: new Date() },
-    ...prev,
-  ]);
-});
+      setNotifications((prev) => [
+        { ...data, time: new Date() },
+        ...prev,
+      ]);
+    });
 
-    // ✅ FIXED ACTIVITY (NO DUPLICATE)
     socket.on("taskUpdated", (data) => {
       fetchTasks();
 
@@ -73,7 +71,7 @@ const [showNotifications, setShowNotifications] = useState(false);
       socket.off("onlineUsers");
       socket.off("notification");
     };
-  }, [fetchTasks]);
+  }, [fetchTasks,user?.email]);
 
   // ================= CREATE =================
   const createTask = async () => {
@@ -104,11 +102,11 @@ const [showNotifications, setShowNotifications] = useState(false);
     await API.put("/api/tasks/update-status", { taskId, status });
   };
 
-  const updateTaskDetails = async () => {
-    await API.put("/api/tasks/update", selectedTask);
-    setSelectedTask(null);
-    fetchTasks();
-  };
+  // const updateTaskDetails = async () => {
+  //   await API.put("/api/tasks/update", selectedTask);
+  //   setSelectedTask(null);
+  //   fetchTasks();
+  // };
 
   const onDragEnd = (result) => {
     if (!result.destination) return;
@@ -119,83 +117,81 @@ const [showNotifications, setShowNotifications] = useState(false);
     updateTask(taskId, newStatus);
   };
 
-  // ================= AVATAR =================
   const getInitial = (name) => name?.charAt(0).toUpperCase();
 
+  // ================= UI =================
   return (
     <div style={{ padding: "20px" }}>
 
+      {/* 🔔 NOTIFICATIONS */}
+      <div style={{ position: "absolute", top: "20px", right: "20px" }}>
+        <button
+          onClick={() => setShowNotifications(!showNotifications)}
+          style={{
+            background: "#2563eb",
+            color: "white",
+            border: "none",
+            padding: "8px 12px",
+            borderRadius: "6px",
+            cursor: "pointer"
+          }}
+        >
+          🔔 ({notifications.length})
+        </button>
+
+        {showNotifications && (
+          <div style={{
+            position: "absolute",
+            right: 0,
+            top: "40px",
+            width: "260px",
+            background: "white",
+            borderRadius: "10px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+            padding: "10px"
+          }}>
+            <h4>Notifications</h4>
+
+            {notifications.map((n, i) => (
+              <div key={i} style={{ borderBottom: "1px solid #eee", padding: "6px" }}>
+                <div>{n.message}</div>
+                <small>{new Date(n.time).toLocaleTimeString()}</small>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* ONLINE USERS */}
-      <div style={{ marginBottom: "15px" }}>
+      <div>
         <strong>Online:</strong>
         {onlineUsers.map((u, i) => (
           <span key={i} style={{ marginLeft: "10px" }}>🟢 {u}</span>
         ))}
       </div>
 
-      <div style={{ position: "absolute", top: "20px", right: "20px" }}>
-  <button onClick={() => setShowNotifications(!showNotifications)}>
-    🔔 ({notifications.length})
-  </button>
-
-  {showNotifications && (
-    <div style={{
-      position: "absolute",
-      right: 0,
-      top: "40px",
-      width: "250px",
-      background: "white",
-      borderRadius: "10px",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-      padding: "10px",
-      maxHeight: "300px",
-      overflowY: "auto"
-    }}>
-      <h4>Notifications</h4>
-
-      {notifications.length === 0 && <div>No notifications</div>}
-
-      {notifications.map((n, i) => (
-        <div key={i} style={{
-          padding: "8px",
-          borderBottom: "1px solid #eee"
-        }}>
-          <div>{n.message}</div>
-          <small style={{ color: "gray" }}>
-            {new Date(n.time).toLocaleTimeString()}
-          </small>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-
       {/* INPUT */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+      <div style={{ display: "flex", gap: "10px", margin: "20px 0" }}>
         <input
           placeholder="Enter task..."
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
         />
 
-        <select
-          value={selectedUser}
-          onChange={(e) => setSelectedUser(e.target.value)}
-        >
+        <select onChange={(e) => setSelectedUser(e.target.value)}>
           <option value="">Assign User</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.name}
-            </option>
+          {users.map(u => (
+            <option key={u.id} value={u.id}>{u.name}</option>
           ))}
         </select>
 
         <button onClick={createTask}>Add</button>
       </div>
 
+      {/* BOARD */}
       <div style={{ display: "flex", gap: "20px" }}>
         <DragDropContext onDragEnd={onDragEnd}>
-          {columns.map((col) => (
+          {columns.map(col => (
             <Droppable droppableId={col} key={col}>
               {(provided) => (
                 <div
@@ -203,8 +199,8 @@ const [showNotifications, setShowNotifications] = useState(false);
                   {...provided.droppableProps}
                   style={{
                     width: "250px",
-                    padding: "10px",
                     minHeight: "400px",
+                    padding: "10px",
                     borderRadius: "10px",
                     background:
                       col === "todo"
@@ -216,69 +212,46 @@ const [showNotifications, setShowNotifications] = useState(false);
                 >
                   <h3>{col}</h3>
 
-                  {tasks
-                    .filter((t) => t.status === col)
-                    .map((task, index) => (
-                      <Draggable
-                        key={task.id}
-                        draggableId={task.id.toString()}
-                        index={index}
-                      >
-                        {(provided) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            onClick={() => setSelectedTask(task)}
-                            style={{
-                              background: "white",
-                              padding: "12px",
-                              borderRadius: "10px",
-                              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                              marginBottom: "12px",
-                              cursor: "pointer",
-                              ...provided.draggableProps.style,
-                            }}
-                          >
-                            <strong>{task.title}</strong>
+                  {tasks.filter(t => t.status === col).map((task, index) => (
+                    <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          onClick={() => setSelectedTask(task)}
+                          style={{
+                            background: "white",
+                            padding: "10px",
+                            marginBottom: "10px",
+                            borderRadius: "8px",
+                            ...provided.draggableProps.style
+                          }}
+                        >
+                          <strong>{task.title}</strong>
 
-                            {/* PRIORITY */}
-                            <div style={{ marginTop: "5px" }}>
-                              {task.priority === "low" && <span style={{ color: "green" }}>🟢 Low</span>}
-                              {task.priority === "medium" && <span style={{ color: "orange" }}>🟡 Medium</span>}
-                              {task.priority === "high" && <span style={{ color: "red" }}>🔴 High</span>}
-                            </div>
-
-                            {/* DUE DATE */}
-                            {task.due_date && (
-                              <div style={{ fontSize: "12px", marginTop: "5px" }}>
-                                📅 {new Date(task.due_date).toLocaleDateString()}
-                              </div>
-                            )}
-
-                            {/* USER */}
-                            <div style={{ marginTop: "5px" }}>
-                              <span style={{
-                                display: "inline-block",
-                                width: "30px",
-                                height: "30px",
-                                borderRadius: "50%",
-                                background: "#2563eb",
-                                color: "white",
-                                textAlign: "center",
-                                lineHeight: "30px",
-                                marginRight: "5px"
-                              }}>
-                                {getInitial(task.user_name || "U")}
-                              </span>
-                              {task.user_name || "Unassigned"}
-                            </div>
-
-                            <button onClick={(e) => deleteTask(task.id, e)}>X</button>
+                          {/* PRIORITY */}
+                          <div>
+                            {task.priority === "low" && "🟢 Low"}
+                            {task.priority === "medium" && "🟡 Medium"}
+                            {task.priority === "high" && "🔴 High"}
                           </div>
-                        )}
-                      </Draggable>
-                    ))}
+
+                          {/* DATE */}
+                          {task.due_date && (
+                            <div>📅 {new Date(task.due_date).toLocaleDateString()}</div>
+                          )}
+
+                          {/* USER */}
+                          <div>
+                            {getInitial(task.user_name)} {task.user_name}
+                          </div>
+
+                          <button onClick={(e) => deleteTask(task.id, e)}>X</button>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
 
                   {provided.placeholder}
                 </div>
@@ -288,79 +261,11 @@ const [showNotifications, setShowNotifications] = useState(false);
         </DragDropContext>
 
         {/* ACTIVITY */}
-        <div style={{ width: "220px" }}>
+        <div>
           <h3>Activity</h3>
           {activity.map((a, i) => <div key={i}>{a}</div>)}
         </div>
       </div>
-
-      {/* MODAL */}
-      {selectedTask && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          background: "rgba(0,0,0,0.5)"
-        }}>
-          <div style={{
-            background: "white",
-            padding: "25px",
-            margin: "100px auto",
-            width: "320px",
-            borderRadius: "10px"
-          }}>
-
-            <h3>Edit Task</h3>
-
-            <input
-              value={selectedTask.title}
-              onChange={(e) =>
-                setSelectedTask({ ...selectedTask, title: e.target.value })
-              }
-              style={{ width: "100%", marginBottom: "10px" }}
-            />
-
-            <select
-              value={selectedTask.priority || "low"}
-              onChange={(e) =>
-                setSelectedTask({ ...selectedTask, priority: e.target.value })
-              }
-              style={{ width: "100%", marginBottom: "10px" }}
-            >
-              <option value="low">🟢 Low</option>
-              <option value="medium">🟡 Medium</option>
-              <option value="high">🔴 High</option>
-            </select>
-
-            <input
-              type="date"
-              value={selectedTask.due_date || ""}
-              onChange={(e) =>
-                setSelectedTask({ ...selectedTask, due_date: e.target.value })
-              }
-              style={{ width: "100%", marginBottom: "10px" }}
-            />
-
-            <select
-              value={selectedTask.assigned_to || ""}
-              onChange={(e) =>
-                setSelectedTask({ ...selectedTask, assigned_to: e.target.value })
-              }
-              style={{ width: "100%", marginBottom: "10px" }}
-            >
-              {users.map(user => (
-                <option key={user.id} value={user.id}>{user.name}</option>
-              ))}
-            </select>
-
-            <button onClick={updateTaskDetails}>Save</button>
-            <button onClick={() => setSelectedTask(null)}>Cancel</button>
-
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -55,21 +55,18 @@ require("./config/db");
 
 // ================= TEST =================
 app.get("/", (req, res) => {
-  res.send("🚀 CollabBoard Backend Running...");
+  res.send("🚀 Backend Running");
 });
 
 // ================= SOCKET LOGIC =================
-
-// 🔥 Track users + sockets
 let onlineUsers = [];
-let userSocketMap = {}; // { username: socketId }
+let userSocketMap = {};
 
 io.on("connection", (socket) => {
-  console.log("⚡ User connected:", socket.id);
+  console.log("⚡ Connected:", socket.id);
 
-  // ================= USER ONLINE =================
   socket.on("userOnline", (username) => {
-    socket.username = username; // ✅ FIX
+    socket.username = username;
 
     if (!onlineUsers.includes(username)) {
       onlineUsers.push(username);
@@ -80,30 +77,17 @@ io.on("connection", (socket) => {
     io.emit("onlineUsers", onlineUsers);
   });
 
-  // ================= SEND NOTIFICATION =================
   socket.on("sendNotification", ({ toUser, message }) => {
-    const targetSocket = userSocketMap[toUser];
-
-    if (targetSocket) {
-      io.to(targetSocket).emit("notification", {
+    const target = userSocketMap[toUser];
+    if (target) {
+      io.to(target).emit("notification", {
         message,
         time: new Date()
       });
     }
   });
 
-  // ================= BROADCAST NOTIFICATION =================
-  socket.on("broadcastNotification", (message) => {
-    io.emit("notification", {
-      message,
-      time: new Date()
-    });
-  });
-
-  // ================= DISCONNECT =================
   socket.on("disconnect", () => {
-    console.log("❌ User disconnected:", socket.id);
-
     if (socket.username) {
       onlineUsers = onlineUsers.filter(u => u !== socket.username);
       delete userSocketMap[socket.username];
@@ -117,5 +101,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-  console.log(`🔥 Server running on port ${PORT}`);
+  console.log(`🔥 Server running on ${PORT}`);
 });
