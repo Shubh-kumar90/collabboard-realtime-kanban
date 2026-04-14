@@ -19,8 +19,8 @@ const userRoutes = require("./routes/userRoutes");
 // ================= SOCKET =================
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
-    credentials: true
+    origin: "*",
+    methods: ["GET", "POST"]
   }
 });
 
@@ -30,7 +30,7 @@ app.set("io", io);
 app.use(express.json());
 
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: "https://collabboard-realtime-kanban.vercel.app",
   credentials: true
 }));
 
@@ -38,10 +38,10 @@ app.use(session({
   secret: "collab_secret",
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    secure: false,
-    sameSite: "lax"
-  }
+ cookie: {
+  secure: true,
+  sameSite: "none"
+}
 }));
 
 // ================= ROUTES =================
